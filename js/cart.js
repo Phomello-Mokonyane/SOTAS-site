@@ -1,5 +1,19 @@
-let cart = JSON.parse(localStorage.getItem('sotas_cart') || '[]');
-function saveCart(){ localStorage.setItem('sotas_cart', JSON.stringify(cart)); }
+function safeReadCart(){
+  try {
+    return JSON.parse(localStorage.getItem('sotas_cart') || '[]');
+  } catch (error) {
+    return [];
+  }
+}
+function safeWriteCart(data){
+  try {
+    localStorage.setItem('sotas_cart', JSON.stringify(data));
+  } catch (error) {
+    // Ignore storage errors in restricted or private browsers.
+  }
+}
+let cart = safeReadCart();
+function saveCart(){ safeWriteCart(cart); }
 function cartCount(){ return cart.reduce((a,c)=>a+c.qty,0); }
 function addToCart(sku, size){
 if(!size){ alert('Please select a size'); return; }

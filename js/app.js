@@ -1,3 +1,13 @@
+function safeGetStorage(key){
+try { return localStorage.getItem(key); } catch (error) { return null; }
+}
+function safeSetStorage(key, value){
+try { localStorage.setItem(key, value); } catch (error) { /* Ignore storage errors in restricted browsers. */ }
+}
+function safeRemoveStorage(key){
+try { localStorage.removeItem(key); } catch (error) { /* Ignore storage errors in restricted browsers. */ }
+}
+
 function stockText(v){ return Object.entries(v.sizes).map(([s,q])=>`${s} ×${q}`).join(" • "); }
 
 function createGroupCard(group){
@@ -76,7 +86,8 @@ if(sizesWrap) attachSizePills(sizesWrap);
 function attachSizePills(wrap){ if(!wrap) return; wrap.querySelectorAll(".size-pill").forEach(p=>{ p.addEventListener("click",()=>{ wrap.querySelectorAll(".size-pill").forEach(x=>x.classList.remove("active")); p.classList.add("active"); }); }); }
 function handleAdd(btn){ const card=btn.closest(".product-card"); const sku=card.dataset.selectedSku; const sizeEl=card.querySelector(".size-pill.active"); const size=sizeEl?sizeEl.dataset.size:null; addToCart(sku,size); }
 function handleStackAdd(btn){ const card=btn.closest(".stack-card"); const sku=card.dataset.selectedSku; const sizeEl=card.querySelector('[data-role="sizes"] .size-pill.active'); const size=sizeEl?sizeEl.dataset.size:null; addToCart(sku,size); }
-function renderGroups(list, containerId){ const el=document.getElementById(containerId); if(!el) return; el.innerHTML=list.map(createGroupCard).join(""); attachGroupLogic(el); observeReveals(); }
+function renderGroups(list, containerId){ const el=document.getElementById(containerId); if(!el) return; el.innerHTML=list.map(createGroupCard).join(""); attachGroupLogic(el); observeReveals(); const countEl=document.getElementById('shopCount'); if(countEl) countEl.textContent = `${list.length} items`;
+}
 function renderStack(list, containerId){ const el=document.getElementById(containerId); if(!el) return; el.innerHTML=list.map((g,i)=>createStackCard(g,i)).join(""); attachStackLogic(el); observeReveals(); }
 
 function createIndividualCard(product){
@@ -94,6 +105,15 @@ addToCart(sku,size);
 
 function renderIndividual(list, containerId){
 const el=document.getElementById(containerId); if(!el) return;
+if(!list.length){
+el.innerHTML = `
+<div class="empty-state reveal">
+  <h3>No products match this filter.</h3>
+  <p>Try a different category or browse the full SOTAS collection.</p>
+  <button class="btn-primary" onclick="location.href='shop.html'">View all stock</button>
+</div>`;
+return;
+}
 el.innerHTML=list.map(createIndividualCard).join("");
 el.querySelectorAll(".product-card").forEach(card=>{
 const wrap=card.querySelector('[data-role="sizes"]')||card.querySelector(".sizes");
@@ -160,9 +180,10 @@ else if(f==="apparel") out=PRODUCTS.filter(p=>p.category!=="headwear");
 else if(f==="headwear") out=[];
 }
 renderIndividual(out,"shopGrid");
+const countEl=document.getElementById('shopCount'); if(countEl) countEl.textContent = `${out.length} items`;
 };
 btns.forEach(b=>b.addEventListener("click",()=>apply(b.dataset.filter)));
-const params=new URLSearchParams(location.search).get("filter")||localStorage.getItem("sotas_filter")||"all"; apply(params); localStorage.removeItem("sotas_filter");
+const params=new URLSearchParams(location.search).get("filter")||safeGetStorage("sotas_filter")||"all"; apply(params); safeRemoveStorage("sotas_filter");
 }
 
 function observeReveals(){
@@ -316,7 +337,7 @@ if(document.getElementById("featuredGrid")) renderGroups(PRODUCT_GROUPS.filter(g
 if(document.getElementById("stackGrid")) renderStack(PRODUCT_GROUPS.filter(g=>g.bestseller).slice(0,4),"stackGrid");
 initShop();
 observeReveals();
-document.querySelectorAll("[data-shop]").forEach(a=>a.addEventListener("click",e=>{ e.preventDefault(); const v=e.currentTarget.dataset.shop; if(location.pathname.includes("shop.html")){ localStorage.setItem("sotas_filter",v); location.search=`?filter=${v}`; } else location.href=`shop.html?filter=${v}`; }));
+document.querySelectorAll("[data-shop]").forEach(a=>a.addEventListener("click",e=>{ e.preventDefault(); const v=e.currentTarget.dataset.shop; if(location.pathname.includes("shop.html")){ safeSetStorage("sotas_filter",v); location.search=`?filter=${v}`; } else location.href=`shop.html?filter=${v}`; }));
 document.querySelectorAll("[data-company]").forEach(a=>a.addEventListener("click",e=>{
 e.preventDefault(); const v=e.currentTarget.dataset.company;
 if(v==="story"){ const s=document.querySelector("#story"); if(s) s.scrollIntoView({behavior:"smooth"}); else location.href="index.html#story"; }
